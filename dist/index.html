@@ -1,0 +1,37 @@
+<!doctype html><html lang="es"><head><script src="sura-input-guard.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a677c"><meta name="description" content="Elegí tu personaje y corré por la playa. Un runner 3D infinito con controles táctiles y dificultad progresiva."><title>Playa Run — Elegí tu personaje</title><link rel="stylesheet" href="style.css"></head><body>
+<canvas id="game" aria-label="Juego 3D Playa Run"></canvas><div class="vignette"></div>
+<header><a class="brand" href="./">◈ <span>PLAYA RUN</span></a><div class="tools"><button id="sound" aria-label="Activar sonido" title="Sonido">♪<span id="soundState">OFF</span></button><button id="pause" aria-label="Pausar" title="Pausar">Ⅱ</button></div></header>
+<div id="hud" hidden><div class="score"><span>PUNTAJE</span><strong id="score">00000</strong><div><b id="distance">0 m</b><i> / </i><b id="coins">◈ 0</b></div></div><div class="velocity"><span>VELOCIDAD <b id="velocity">13</b> m/s</span><div><i id="speedFill"></i></div></div><div id="powers"></div></div>
+<main id="menu" aria-label="Elegir personaje">
+ <div class="menu-intro">
+  <span class="eyebrow">¡LA COSTA ES TUYA!</span>
+  <h1>PLAYA<span>RUN</span></h1>
+  <p class="menu-prompt">Elegí tu personaje. <br>¡Y que empiece la aventura!</p>
+  <div class="record">TU RÉCORD <strong id="best">0</strong> <span>PTS</span></div>
+  <div class="top3" aria-label="Top 3 jugadores">
+   <span class="top3-title">TOP 3</span>
+   <ol id="top3List"><li class="top3-empty">Cargando…</li></ol>
+  </div>
+  <button type="button" id="openRanking" class="ranking-link"><span class="ranking-link-icon">🏆</span>Ver ranking completo</button>
+ </div>
+ <div class="selection">
+  <div class="character-stage">
+   <span class="stage-tag">LISTO PARA RODAR</span>
+   <canvas id="characterPreview" aria-label="Vista previa del personaje seleccionado"></canvas>
+   <div class="character-caption"><h2 id="characterName">Suri</h2><p id="characterCaption">El camaleón de la costa.</p></div>
+  </div>
+  <div class="character-options" role="group" aria-label="Personajes disponibles">
+   <button type="button" class="character-card" data-character="toucan" aria-pressed="false" style="--character-color:#ffb62c"><img alt="" width="160" height="160"><span>Tucán</span><b class="selected-mark" aria-hidden="true">✓</b></button>
+   <button type="button" class="character-card" data-character="capybara" aria-pressed="false" style="--character-color:#ff9d63"><img alt="" width="160" height="160"><span>Capibara</span><b class="selected-mark" aria-hidden="true">✓</b></button>
+   <button type="button" class="character-card" data-character="raccoon" aria-pressed="false" style="--character-color:#38d7d0"><img alt="" width="160" height="160"><span>Mapache</span><b class="selected-mark" aria-hidden="true">✓</b></button>
+   <button type="button" class="character-card" data-character="suri" aria-pressed="true" style="--character-color:#b4ed4a"><img alt="" width="160" height="160"><span>Suri</span><b class="selected-mark" aria-hidden="true">✓</b></button>
+  </div>
+  <button class="primary" id="start">¡A JUGAR! <span aria-hidden="true">▶</span></button>
+  <p id="selectionStatus" class="selection-status" aria-live="polite">Vas a jugar con Suri</p>
+ </div>
+ <div class="instructions" id="instructions"></div>
+ <p class="build-tag"><i id="buildTagMenu"></i></p>
+</main>
+<section id="rankingOverlay" hidden><div class="panel ranking-panel"><div class="eyebrow">RANKING</div><h2>Mejores Puntajes</h2><p id="rankingLoading">Cargando…</p><ol id="rankingList" hidden></ol><button class="secondary" id="closeRanking">Volver</button></div></section>
+<section id="dialog" hidden><div class="panel"><div class="eyebrow" id="dialogTag">FIN DE LA AVENTURA</div><h2 id="dialogTitle">Un paso más<br>la próxima vez.</h2><div id="results"><strong id="finalScore">0</strong><span>PUNTOS</span><p id="finalDetail"></p></div><button class="primary" id="resume">Volver a rodar <span>↗</span></button><button class="secondary" id="home">Elegir personaje</button></div></section>
+<div id="feedback" aria-live="polite"></div><footer id="footer"><span>CUATRO PERSONAJES · UNA AVENTURA <i id="buildTag">v1.3.4</i></span><span>SALTA · ESQUIVÁ · SUPERATE</span></footer><div id="error" hidden>Tu navegador no pudo iniciar WebGL. Probá habilitar la aceleración gráfica y recargar.</div><script type="module" src="js/main.js"></script></body></html>

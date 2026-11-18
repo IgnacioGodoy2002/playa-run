@@ -1,0 +1,9 @@
+PLAYA RUN - JUEGO COMPLETO
+
+Incluye los cuatro personajes 3D mejorados, menu, musica, controles, sombras y la ultima dificultad progresiva (velocidad maxima base: 70 m/s).
+
+Para ejecutar localmente, abre una terminal en esta carpeta y ejecuta:
+python -m http.server 8000 --directory dist
+Luego abre http://localhost:8000 en el navegador.
+
+Para alojarlo en web, publica el contenido de dist. No requiere compilacion; todo el codigo JavaScript editable esta en dist/js.

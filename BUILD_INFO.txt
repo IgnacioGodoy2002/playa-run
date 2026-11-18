@@ -1,0 +1,269 @@
+Playa Run — Build Info
+======================
+
+Versión:   1.3.4-sura
+Fecha:     2026-10-22
+
+Novedades v1.3.4
+-----------------
+  - El menú ya no se scrollea en mobile: entra todo de una. La 1.3.3
+    había dejado el TOP 3 y el botón de ranking abajo del fold.
+    Apretado parejo (título 2.5rem, escenario del personaje a 21vh,
+    menos margen en tarjetas, botón y gaps) y, lo que no entra, se
+    saca por orden de importancia según el alto real del teléfono:
+      >= 900px  todo, controles incluidos (tablet)
+      >= 700px  todo menos los controles (iPhone 14, Android típico)
+      >= 601px  además sin TOP 3; queda "Ver ranking completo"
+                (iPhone SE y pantallas chicas)
+    Medido en los cuatro: scroll = 0.
+  - El HUD de la partida arrancaba a 83px fijos y, con el notch, caía
+    encima de la barra de marca: "PUNTAJE" se dibujaba sobre "PLAYA
+    RUN". Ahora también sale del área segura. Lo mismo en apaisado.
+
+Novedades v1.3.3
+-----------------
+Solo layout de mobile vertical, visto en un iPhone real adentro de la
+app. Nada de esto se notaba en el navegador: el notch y el pie fijo eran
+los que rompían.
+
+  - El menú arrancaba a 70px fijos del borde, sin contar el notch, así
+    que el título PLAYA RUN se metía abajo de la barra de marca y del
+    botón de sonido. Ahora los márgenes salen de las áreas seguras
+    (env(safe-area-inset-*)), arriba y abajo.
+  - Orden nuevo: título, personaje, ranking. Antes el TOP 3 y "Ver
+    ranking completo" iban arriba y empujaban la elección de personaje
+    y el botón de ¡A JUGAR! fuera de la vista. Se logra con
+    display:contents en .menu-intro, que deja intercalar sus hijos con
+    la tarjeta de selección sin tocar el HTML.
+  - El pie fijo se superponía con el final de la tarjeta y con el TOP 3
+    mientras scrolleaba. En mobile es decorativo, así que se oculta; la
+    marca de versión se espeja dentro del menú (el número vive en un
+    solo lugar del HTML, main.js lo copia).
+  - Alto apretado — título 2.6rem, escenario del personaje a 24vh,
+    menos margen en las tarjetas y el botón — para que entren el
+    personaje, el ¡A JUGAR! y el TOP 3 completo sin scrollear en un
+    iPhone 14.
+  - El TOP 3 vuelve a mostrarse en todas las alturas de mobile: ahora
+    que va debajo del personaje, ya no empuja nada importante.
+
+Novedades v1.3.2
+-----------------
+  - Cuando no hay ranking, el menú ahora dice POR QUÉ, con un código
+    que apunta a dónde está el problema. Sin esto, "no carga el
+    ranking" obliga a adivinar entre tres causas que se arreglan en
+    lugares distintos:
+      E1  El host nunca contestó el MINIGAME_READY — no hay puente en
+          el WebView, o no responde. Se arregla del lado de la app.
+      E2  El handshake llegó, pero el INIT_GAME vino sin gameId o sin
+          apiBaseUrl. Se arregla en el payload del host.
+      E3  Había sesión y endpoint, y la API falló: CORS, 500, o
+          timeout a los 8s. Se arregla del lado del backend.
+    En standalone (pestaña suelta) no aplica: ahí sigue la preview.
+
+Novedades v1.3.1
+-----------------
+Salió del contrato real que quedó documentado para Safari Crossing. Ese
+documento pedía cambios del lado de sura-universal; acá se resolvió todo
+del lado del juego, sin tocar el host.
+
+  - MINIGAME_READY se reanuncia con backoff (0 / 300 / 700 / 1500 /
+    2500 / 2500 ms, ~7s) hasta que llega el INIT_GAME. El WebView
+    nativo engancha su handler DESPUÉS de que la página cargó: el
+    único READY que se mandaba al arrancar se perdía en el aire y el
+    handshake no empezaba nunca. Los reintentos se cortan apenas
+    contestan, así que el host no abre sesiones de más.
+  - Sesión nueva por partida: después de un GAME_COMPLETE el
+    sessionId queda consumido, y reusarlo hacía que el host rechazara
+    la segunda corrida como duplicada — la primera partida pagaba y
+    la segunda no. Ahora se reabre el handshake al morir, así
+    "Volver a rodar" arranca con sesión fresca.
+  - Alias de nombres de mensaje: el host usa MINIGAME_PAUSE o
+    SURA_MINIGAME_PAUSE y SESSION_ACCEPTED o
+    MINIGAME_SESSION_ACCEPTED según el minijuego. El juego acepta las
+    dos formas de entrada y manda el ack con los dos nombres (uno
+    desconocido se ignora; uno esperado que no llega deja la sesión
+    colgada). Los payloads van con las dos grafías a la vez
+    (session_id y sessionId, game_id y gameId).
+  - Si llegan dos INIT_GAME (el host alcanzó a oír dos READY), se
+    ackean los dos pero el ranking se vuelve a pedir solo si cambió
+    gameId/apiBaseUrl/username, en vez de duplicar el fetch.
+  - Marca de versión en el pie del menú (v1.3.1), para confirmar de
+    un vistazo qué build quedó servida sin abrir devtools.
+
+Novedades v1.3.0
+-----------------
+Todo lo que fallaba "solo en mobile" era una misma causa: dentro de la
+app nativa el juego le hablaba al host por el canal equivocado.
+
+  - dist/js/sura.js — en la WebView de React Native `window.parent ===
+    window`, así que `window.parent.postMessage(...)` se mandaba los
+    mensajes a sí mismo y el host no se enteraba de nada. Ahora, cuando
+    existe `window.ReactNativeWebView`, se usa ese puente (que además
+    solo transporta strings, así que todo sale serializado con JSON).
+    De paso, los mensajes del host se escuchan también en `document`
+    — en Android RN los inyecta ahí, no en `window` — y se parsea el
+    JSON de entrada. Consecuencias directas: el handshake INIT_GAME
+    ahora llega en mobile, así que existen gameId/apiBaseUrl (ranking
+    real en vez del listado de preview) y GAME_COMPLETE sale de
+    verdad (las recompensas se pagan).
+  - sura.js: SESSION_ACCEPTED y GAME_COMPLETE ya no esperan a conocer
+    el origen del host — en nativo no hay iframe ni origen que
+    conocer, y esa condición los dejaba mudos. Un envío que falla ya
+    no tira: antes una excepción en el ack cortaba el handshake por la
+    mitad y el ranking quedaba en "Cargando…" para siempre.
+  - sura.js: `onSessionReady` registrado después de que el INIT ya
+    llegó se ejecuta en el acto, en vez de esperar un evento que ya
+    pasó (en mobile el host contesta más rápido que la carga de
+    main.js).
+  - dist/js/leaderboard.js — embebido ya NUNCA cae al listado de
+    preview: si hay sesión real y el pedido falla, devuelve null y la
+    UI muestra "No se pudo cargar el ranking". Mostrar alias
+    inventados adentro de la app se leía justamente como un ranking
+    cargado mal. Además, timeout de 8s (antes, con señal mala, el
+    fetch quedaba colgado para siempre) y chequeo de la forma de la
+    respuesta.
+  - Menú: el TOP 3 ahora tiene un timeout de 10s por si el handshake
+    nunca llega, en vez de quedarse en "Cargando…".
+  - El botón de sonido se superponía con la X de cerrar que el host
+    dibuja arriba a la derecha, encima del iframe/WebView. Embebido
+    (`body.embedded`), los botones del juego se mudan al lado de la
+    marca, a la izquierda.
+  - El nombre y la descripción del personaje estaban absolutos encima
+    del canvas de la vista previa: le tapaban las patas al modelo y la
+    descripción quedaba cortada contra el borde de abajo. Ahora van en
+    flujo, debajo del personaje (al costado, en apaisado).
+  - Mobile vertical: el TOP 3 y "Ver ranking completo" estaban
+    ocultos por CSS — los puntajes cargaban pero no se veían. Ahora se
+    muestran; el TOP 3 completo solo en pantallas altas (>=740px), para
+    no empujar el botón de ¡A JUGAR! abajo del fold en teléfonos
+    chicos.
+
+Novedades v1.2.0
+-----------------
+  - Velocidad progresiva de verdad: se sentía muy rápido casi desde el
+    arranque. BASE_SPEED bajó de 17 a 13 m/s, y la curva de
+    difficulty.js (runSpeed) ahora tarda mucho más en acercarse al
+    tope (denominador de la exponencial 580→980 — a 580m de distancia
+    recorrida antes ya estaba al 63% del camino a MAX_SPEED, ahora
+    está al 45%). MAX_SPEED se deja igual (70 m/s): el tope de una
+    corrida larga no cambia, solo lo gradual que es llegar ahí.
+    Medido: antes llegaba a ~30+ m/s a los 15s; ahora ~21 m/s.
+  - Botón "Ver ranking completo" rediseñado: antes era un link de
+    texto subrayado, ahora es un botón real (degradé, borde, sombra,
+    ícono de trofeo) consistente con el resto de la UI.
+
+Novedades v1.1.0
+-----------------
+Se agregó el leaderboard real, pedido después de armar la v1.0.0:
+
+  - dist/js/leaderboard.js — mismo endpoint público que ya usan Pengu
+    Rush y Joystick Pop: GET {apiBaseUrl}/minigames/v1/games/{gameId}/
+    leaderboard?per_page=N. Cae a un listado de preview sin sesión real
+    (standalone, o antes de que termine el handshake) o si el fetch
+    falla, para que la pantalla nunca se vea vacía.
+  - Menú: un apartado "TOP 3" debajo de TU RÉCORD, con medallas 🥇🥈🥉.
+    Se pide apenas carga en standalone, y recién después del handshake
+    (sura.js: onSessionReady) en modo embebido, porque gameId/
+    apiBaseUrl reales no existen hasta ese momento.
+  - Botón "Ver ranking completo" que abre una pantalla con hasta 50
+    puestos, resaltando la fila del jugador actual si su alias matchea
+    el nickname que mandó INIT_GAME.
+  - Todo alias ajeno se escapa antes de ir a innerHTML (nickname de
+    otro jugador, no confiable — el endpoint es público).
+
+Novedades v1.0.0
+------------------
+Primera vez que el juego habla con la plataforma SURA. Antes corría
+standalone nomás, sin avisarle a nada cuándo termina una partida — no
+había ni rastro de postMessage en el código.
+
+Se agregó dist/js/sura.js, mismo contrato que ya usan Pengu Rush /
+Safari Crossing / Joystick Pop:
+
+  - MINIGAME_READY al cargar.
+  - INIT_GAME: toma token/sessionId/gameId/apiBaseUrl/bestScore del host
+    en vez de nada hardcodeado — un solo build sirve en cualquier
+    ambiente (localhost/staging/prod/app nativa).
+  - El récord local (localStorage 'playa-best') se reconcilia contra el
+    bestScore de la cuenta real, solo subiéndolo, nunca bajándolo.
+  - SESSION_ACCEPTED al aceptar el handshake.
+  - MINIGAME_STARTED al arrancar una corrida real (no en el menú).
+  - GAME_COMPLETE (score + duration_ms real) al morir.
+  - PAUSE/RESUME del host enganchados al pause() que ya existía.
+  - Si no hay host (pestaña suelta), todo es no-op — sigue funcionando
+    standalone como siempre.
+
+Sin curva anti-trampa configurada (decisión explícita, ver PR de
+sura-api): paga siempre, confiando en el cliente, mismo criterio que
+quedó en Joystick Pop y Coin Kingdom.
+
+Validación hecha
+-----------------
+v1.3.4, con áreas seguras simuladas, en iPhone 14 (390x844, notch
+47/34), iPhone SE (375x667), Android (412x915) y 360x640:
+  - scroll del menú = 0 en los cuatro, con el ¡A JUGAR! visible.
+  - jugando, en modo embebido (botones a la izquierda, que es el caso
+    donde chocaban): el HUD no pisa ni la marca ni los botones, en los
+    cuatro y también en apaisado.
+  - desktop y apaisado sin cambios.
+
+v1.3.3, con las áreas seguras simuladas por variable CSS (env() no se
+puede pisar desde afuera; una custom property sí), en iPhone 14
+(390x844, notch 47/34), iPhone SE (375x667), Android (412x915) y un
+360x640. En los cuatro: el título no choca con la barra de marca, el
+botón de ¡A JUGAR! queda visible sin scrollear, la tarjeta no pisa
+nada, y el personaje va antes que el ranking. Desktop y apaisado sin
+cambios, con la versión visible en un solo lugar en cada disposición.
+
+v1.3.2, los cuatro caminos en navegador real:
+  - host que nunca contesta           -> "SURA no respondió. E1"
+  - INIT_GAME sin gameId/apiBaseUrl   -> "Sesión sin datos de ranking. E2"
+  - sesión ok + API en 500            -> "No se pudo cargar el ranking. E3"
+  - sesión ok + API ok                -> TOP 3 con los puestos reales
+
+v1.3.1:
+  - Host que engancha tarde (handler recién a los 1,2s, como la app
+    real): 4 READY hasta que contestan, 1 sola sesión abierta, el
+    handshake completa igual.
+  - Dos partidas seguidas: GAME_COMPLETE con sessionId distinto en
+    cada una (sess-1 / sess-2), que es lo que hace que la segunda
+    pague.
+  - SURA_MINIGAME_PAUSE reconocido; ack emitido con los dos nombres.
+  - Dos INIT_GAME seguidos: un solo fetch de leaderboard.
+  - Iframe web: sin regresiones, sigue descartando otro origen.
+
+v1.3.0, con Playwright sobre dist/ real:
+  - WebView nativa simulada (window.parent === window +
+    ReactNativeWebView, INIT_GAME inyectado como string sobre
+    document): MINIGAME_READY → INIT_GAME → SESSION_ACCEPTED →
+    récord de cuenta reflejado (30.702) → TOP 3 con los puestos
+    reales del endpoint → MINIGAME_STARTED al arrancar.
+    GAME_COMPLETE con sessionId/score/duration_ms verificado aparte.
+  - Iframe web: mismo flujo, sin regresiones; un mensaje de otro
+    origen se sigue descartando.
+  - Endpoint caído (500): TOP 3 y el ranking completo muestran "No se
+    pudo cargar el ranking", no la preview falsa.
+  - Layout a 1440x900, 390x844, 360x640 y 844x390: la descripción del
+    personaje ya no pisa al modelo, y los botones del juego dejan
+    libre la esquina superior derecha.
+
+v1.1.0, con Playwright (headless Chromium), sirviendo dist/ real:
+  - Standalone: carga sin errores de consola, arranca una partida,
+    el puntaje sube solo, TOP 3 se llena con la preview, "Ver ranking
+    completo" abre con 10 puestos y cierra bien.
+  - Embebido en un iframe simulando al host real: MINIGAME_READY →
+    INIT_GAME (bestScore=500) → SESSION_ACCEPTED → récord local
+    actualizado a 500 → TOP 3 se refresca después del handshake →
+    MINIGAME_STARTED al arrancar → GAME_COMPLETE con sessionId/score/
+    duration_ms correctos al morir (colisión real contra un obstáculo,
+    no simulada a mano).
+
+No se tocó la mecánica del juego en sí (física, dificultad, personajes)
+— solo se agregó la capa de integración.
+
+Cómo usar esta build
+----------------------
+  - Servir dist/ con cualquier servidor HTTP estático:
+    python -m http.server 8080 --directory dist
+  - Abierta suelta en una pestaña (no embebida) sigue funcionando en
+    modo standalone.
